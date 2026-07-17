@@ -1,0 +1,471 @@
+{
+  "name": "Dragi Feedback Intake 1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dragi-feedback",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://feedback.dragi.app"
+        }
+      },
+      "id": "9d64381a-bb1a-4a4f-9b50-f0e2184f6a31",
+      "name": "Feedback Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        220
+      ],
+      "webhookId": "dragi-feedback-intake"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f55a2bc8-0fd5-41c8-824e-294f46cd5fd9",
+              "name": "config_sheet_id",
+              "value": "PASTE_GOOGLE_SHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "314bb4df-a489-4282-8156-03d5709b9dcc",
+              "name": "config_sheet_name",
+              "value": "Feedback",
+              "type": "string"
+            },
+            {
+              "id": "69fa0d46-2dbf-4308-b171-8a5e4b9af616",
+              "name": "config_audio_folder_id",
+              "value": "PASTE_GOOGLE_DRIVE_FOLDER_ID",
+              "type": "string"
+            },
+            {
+              "id": "b3358783-fb3e-48ed-bd21-b9eb03c3da75",
+              "name": "config_allowed_origin",
+              "value": "https://feedback.dragi.app",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f121b411-b237-438d-9ab5-e2f7aad70b54",
+      "name": "Feedback Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -820,
+        220
+      ],
+      "notesInFlow": true,
+      "notes": "Вставте Google Sheet ID, назву аркуша та Google Drive folder ID. Облікові дані Google вибираються окремо у відповідних нодах."
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst input = item.json || {};\nconst body = input.body && typeof input.body === 'object' ? input.body : input;\nlet rawPayload = body.payload ?? input.payload;\nif (rawPayload == null && body.schema_version) rawPayload = body;\nif (rawPayload == null) throw new Error('PAYLOAD_MISSING');\nlet payload;\ntry {\n  payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n} catch {\n  throw new Error('PAYLOAD_INVALID_JSON');\n}\nif (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('PAYLOAD_INVALID');\nconst allowedCategories = new Set(['AUDIO', 'VISUAL', 'CONTENT', 'EXERCISE', 'TECHNICAL', 'OTHER']);\nconst safeCell = (value, max = 1200) => {\n  if (value === null || value === undefined) return '';\n  let text = String(value).replace(/\\u0000/g, '').trim().slice(0, max);\n  if (/^[=+\\-@]/.test(text)) text = `\\'${text}`;\n  return text;\n};\nconst feedbackId = safeCell(payload.feedback_id, 80);\nconst category = safeCell(payload.issue_category, 32).toUpperCase();\nconst issueCode = safeCell(payload.issue_code, 80).toUpperCase();\nconst uiLang = safeCell(payload.ui_lang || 'uk', 12).toLowerCase();\nconst contentId = safeCell(payload.content_id, 120);\nconst description = safeCell(payload.description, 1200);\nconst email = safeCell(payload.email, 254);\nif (!feedbackId || !/^[a-zA-Z0-9._:-]{8,80}$/.test(feedbackId)) throw new Error('FEEDBACK_ID_INVALID');\nif (!allowedCategories.has(category)) throw new Error('ISSUE_CATEGORY_INVALID');\nif (!issueCode || !issueCode.startsWith(category + '_')) throw new Error('ISSUE_CODE_INVALID');\nif (!/^[a-z]{2,3}$/.test(uiLang)) throw new Error('UI_LANG_INVALID');\nif (contentId && !/^[a-zA-Z0-9._:-]{1,120}$/.test(contentId)) throw new Error('CONTENT_ID_INVALID');\nif (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) throw new Error('EMAIL_INVALID');\nif (category === 'OTHER' && !description && !item.binary?.audio) throw new Error('OTHER_DETAILS_REQUIRED');\nconst audioSize = Number(payload.audio?.size_bytes || 0);\nif (audioSize > 5 * 1024 * 1024) throw new Error('AUDIO_TOO_LARGE');\nconst origin = safeCell(input.headers?.origin, 200);\nconst allowedOrigin = safeCell(input.config_allowed_origin, 200);\nif (origin && allowedOrigin && origin !== allowedOrigin) throw new Error('ORIGIN_NOT_ALLOWED');\nconst audioMime = safeCell(payload.audio?.mime_type || item.binary?.audio?.mimeType, 100);\nconst extension = audioMime.includes('mp4') ? 'm4a' : audioMime.includes('ogg') ? 'ogg' : 'webm';\nconst priority = category === 'TECHNICAL' ? 'HIGH' : category === 'OTHER' ? 'LOW' : 'NORMAL';\nreturn [{\n  json: {\n    _config_sheet_id: input.config_sheet_id,\n    _config_sheet_name: input.config_sheet_name,\n    _config_audio_folder_id: input.config_audio_folder_id,\n    _config_allowed_origin: allowedOrigin,\n    schema_version: String(payload.schema_version || 1),\n    feedback_id: feedbackId,\n    received_at_utc: new Date().toISOString(),\n    status: 'NEW',\n    priority,\n    ui_lang: uiLang,\n    content_id: contentId,\n    issue_category: category,\n    issue_code: issueCode,\n    description,\n    audio_url: '',\n    audio_status: item.binary?.audio ? 'PENDING_UPLOAD' : 'NONE',\n    audio_mime_type: audioMime,\n    audio_size_bytes: audioSize || '',\n    audio_duration_seconds: Number(payload.audio?.duration_seconds || 0) || '',\n    email,\n    contact_allowed: email ? 'TRUE' : 'FALSE',\n    platform: safeCell(payload.platform, 40),\n    app_version: safeCell(payload.app_version, 40),\n    page_path: safeCell(payload.page_context?.path, 300),\n    user_agent: safeCell(payload.page_context?.user_agent, 500),\n    source_origin: origin,\n    assigned_to: '',\n    resolution_note: '',\n    resolved_at: '',\n    duplicate_of: '',\n    has_audio: Boolean(item.binary?.audio),\n    audio_file_name: `${feedbackId}.${extension}`\n  },\n  binary: item.binary\n}];"
+      },
+      "id": "a72b64ec-75fa-46b7-8afd-e90c7db97a43",
+      "name": "Normalize & Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -590,
+        220
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6f5caecb-f97c-4a3e-851b-9043130f80d9",
+              "leftValue": "={{ $json.has_audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d1e23f6d-3ba8-47c6-83ab-bf2be8aa628d",
+      "name": "Has Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -350,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "audio",
+        "name": "={{ $json.audio_file_name }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json._config_audio_folder_id }}"
+        },
+        "options": {}
+      },
+      "id": "4cd9de65-33d9-4398-b0e2-73abb90b392e",
+      "name": "Upload Audio to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -110,
+        20
+      ],
+      "onError": "continueRegularOutput",
+      "notesInFlow": true,
+      "notes": "Виберіть Google Drive credential. Якщо upload не вдасться, текстовий фідбек все одно буде записано з audio_status=UPLOAD_FAILED."
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first();\nconst base = $('Normalize & Validate').first().json;\nconst drive = current.json || {};\nconst fileId = drive.id || drive.fileId || '';\nreturn [{\n  json: {\n    ...base,\n    audio_url: fileId ? `https://drive.google.com/file/d/${fileId}/view` : '',\n    audio_status: fileId ? 'UPLOADED' : 'UPLOAD_FAILED'\n  },\n  binary: current.binary\n}];"
+      },
+      "id": "a1341727-49f4-4eb3-b1e2-2fa6e20b5fb5",
+      "name": "Finalize With Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        130,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map((item) => ({\n  json: { ...item.json, audio_url: '', audio_status: 'NONE' },\n  binary: item.binary\n}));"
+      },
+      "id": "fe95eb1c-fddc-42d1-9668-31125fdd45e8",
+      "name": "Finalize Without Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -110,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json._config_sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json._config_sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "schema_version": "={{ $json.schema_version }}",
+            "feedback_id": "={{ $json.feedback_id }}",
+            "received_at_utc": "={{ $json.received_at_utc }}",
+            "status": "={{ $json.status }}",
+            "priority": "={{ $json.priority }}",
+            "ui_lang": "={{ $json.ui_lang }}",
+            "content_id": "={{ $json.content_id }}",
+            "issue_category": "={{ $json.issue_category }}",
+            "issue_code": "={{ $json.issue_code }}",
+            "description": "={{ $json.description }}",
+            "audio_url": "={{ $json.audio_url }}",
+            "audio_status": "={{ $json.audio_status }}",
+            "audio_mime_type": "={{ $json.audio_mime_type }}",
+            "audio_size_bytes": "={{ $json.audio_size_bytes }}",
+            "audio_duration_seconds": "={{ $json.audio_duration_seconds }}",
+            "email": "={{ $json.email }}",
+            "contact_allowed": "={{ $json.contact_allowed }}",
+            "platform": "={{ $json.platform }}",
+            "app_version": "={{ $json.app_version }}",
+            "page_path": "={{ $json.page_path }}",
+            "user_agent": "={{ $json.user_agent }}",
+            "source_origin": "={{ $json.source_origin }}",
+            "assigned_to": "={{ $json.assigned_to }}",
+            "resolution_note": "={{ $json.resolution_note }}",
+            "resolved_at": "={{ $json.resolved_at }}",
+            "duplicate_of": "={{ $json.duplicate_of }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "schema_version", "displayName": "schema_version", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "feedback_id", "displayName": "feedback_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "received_at_utc", "displayName": "received_at_utc", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "priority", "displayName": "priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "ui_lang", "displayName": "ui_lang", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "content_id", "displayName": "content_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "issue_category", "displayName": "issue_category", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "issue_code", "displayName": "issue_code", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "description", "displayName": "description", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "audio_url", "displayName": "audio_url", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "audio_status", "displayName": "audio_status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "audio_mime_type", "displayName": "audio_mime_type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "audio_size_bytes", "displayName": "audio_size_bytes", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "audio_duration_seconds", "displayName": "audio_duration_seconds", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "email", "displayName": "email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "contact_allowed", "displayName": "contact_allowed", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "platform", "displayName": "platform", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "app_version", "displayName": "app_version", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "page_path", "displayName": "page_path", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "user_agent", "displayName": "user_agent", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "source_origin", "displayName": "source_origin", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "assigned_to", "displayName": "assigned_to", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "resolution_note", "displayName": "resolution_note", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "resolved_at", "displayName": "resolved_at", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "duplicate_of", "displayName": "duplicate_of", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f70d753b-b826-4e1f-a0dd-44eca762d504",
+      "name": "Append Feedback to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        390,
+        120
+      ],
+      "onError": "continueErrorOutput",
+      "notesInFlow": true,
+      "notes": "Виберіть Google Sheets credential. Заголовки аркуша мають точно відповідати файлу Feedback_sheet_headers.csv."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, feedback_id: $('Normalize & Validate').first().json.feedback_id } }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
+              },
+              {
+                "name": "Vary",
+                "value": "Origin"
+              }
+            ]
+          }
+        }
+      },
+      "id": "48676452-8422-4be9-ab0a-f333b9258d44",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        650,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'VALIDATION_ERROR', message: $json.error?.message || $json.message || 'Invalid request' } }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
+              },
+              {
+                "name": "Vary",
+                "value": "Origin"
+              }
+            ]
+          }
+        }
+      },
+      "id": "9de653ae-3373-4ef0-abdf-9ad49919bb61",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -330,
+        390
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'STORAGE_ERROR', message: 'Feedback could not be saved' } }}",
+        "options": {
+          "responseCode": 500,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
+              },
+              {
+                "name": "Vary",
+                "value": "Origin"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e4361a2e-6eb9-4ffd-b26f-adbd296989b5",
+      "name": "Respond Storage Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        650,
+        220
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Feedback Webhook": {
+      "main": [
+        [
+          {
+            "node": "Feedback Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Configuration": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Validate": {
+      "main": [
+        [
+          {
+            "node": "Has Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Audio?": {
+      "main": [
+        [
+          {
+            "node": "Upload Audio to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finalize Without Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Audio to Drive": {
+      "main": [
+        [
+          {
+            "node": "Finalize With Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize With Audio": {
+      "main": [
+        [
+          {
+            "node": "Append Feedback to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Without Audio": {
+      "main": [
+        [
+          {
+            "node": "Append Feedback to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Feedback to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Storage Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c832ea50-a9aa-4e46-96c5-b6fd98590e92",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

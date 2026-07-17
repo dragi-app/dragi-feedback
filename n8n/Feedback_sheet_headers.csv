@@ -1,0 +1,1 @@
+schema_version,feedback_id,received_at_utc,status,priority,ui_lang,content_id,issue_category,issue_code,description,audio_url,audio_status,audio_mime_type,audio_size_bytes,audio_duration_seconds,email,contact_allowed,platform,app_version,page_path,user_agent,source_origin,assigned_to,resolution_note,resolved_at,duplicate_of
