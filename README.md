@@ -13,13 +13,16 @@ npm run dev
 Приклад посилання:
 
 ```text
-http://localhost:5173/?lang=uk&content_id=25439
+http://localhost:5173/?content_id=25439&lan=uk&content_type=video
 ```
 
 Підтримувані параметри:
 
-- `lang`: `uk` або `en`, невідомі значення використовують українську.
+- `lan`: `uk`, `en`, `es` або `de`; також підтримується старий параметр `lang`.
 - `content_id`: ID матеріалу з застосунку.
+- `content_type`: `video`, `exercisetest`, `exercisematching` або майбутній `exerciseopen`.
+
+Канонічний роздільник параметрів — `&`. Для сумісності форма також розуміє ранній формат із повторними знаками `?`.
 
 ## n8n
 
@@ -31,6 +34,6 @@ http://localhost:5173/?lang=uk&content_id=25439
 
 ## GitHub Pages
 
-Workflow `.github/workflows/deploy-pages.yml` автоматично збирає і публікує сайт з гілки `main`. Production webhook зберігається у `.env.production`. Його URL доступний браузеру під час надсилання, тому перевірка origin, валідація та rate limit мають виконуватися у n8n.
+Workflow `.github/workflows/deploy-pages.yml` автоматично збирає і публікує сайт з гілки `main`. Production webhook передається під час збірки через GitHub Actions secret `VITE_FEEDBACK_WEBHOOK_URL`. Його URL доступний браузеру під час надсилання, тому перевірка origin, валідація та rate limit мають виконуватися у n8n.
 
 Для private-репозиторію GitHub Pages потрібен GitHub Pro, Team або Enterprise. Сам опублікований сайт є публічним, навіть якщо вихідний код приватний.
