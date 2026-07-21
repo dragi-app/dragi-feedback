@@ -1,5 +1,5 @@
 {
-  "name": "Dragi Feedback Intake 1.0",
+  "name": "Dragi Feedback Intake 2.0",
   "nodes": [
     {
       "parameters": {
@@ -66,7 +66,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst input = item.json || {};\nconst body = input.body && typeof input.body === 'object' ? input.body : input;\nlet rawPayload = body.payload ?? input.payload;\nif (rawPayload == null && body.schema_version) rawPayload = body;\nif (rawPayload == null) throw new Error('PAYLOAD_MISSING');\nlet payload;\ntry {\n  payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n} catch {\n  throw new Error('PAYLOAD_INVALID_JSON');\n}\nif (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('PAYLOAD_INVALID');\nconst allowedCategories = new Set(['AUDIO', 'VISUAL', 'CONTENT', 'EXERCISE', 'TECHNICAL', 'OTHER']);\nconst safeCell = (value, max = 1200) => {\n  if (value === null || value === undefined) return '';\n  let text = String(value).replace(/\\u0000/g, '').trim().slice(0, max);\n  if (/^[=+\\-@]/.test(text)) text = `\\'${text}`;\n  return text;\n};\nconst feedbackId = safeCell(payload.feedback_id, 80);\nconst category = safeCell(payload.issue_category, 32).toUpperCase();\nconst issueCode = safeCell(payload.issue_code, 80).toUpperCase();\nconst uiLang = safeCell(payload.ui_lang || 'uk', 12).toLowerCase();\nconst contentId = safeCell(payload.content_id, 120);\nconst description = safeCell(payload.description, 1200);\nconst email = safeCell(payload.email, 254);\nif (!feedbackId || !/^[a-zA-Z0-9._:-]{8,80}$/.test(feedbackId)) throw new Error('FEEDBACK_ID_INVALID');\nif (!allowedCategories.has(category)) throw new Error('ISSUE_CATEGORY_INVALID');\nif (!issueCode || !issueCode.startsWith(category + '_')) throw new Error('ISSUE_CODE_INVALID');\nif (!/^[a-z]{2,3}$/.test(uiLang)) throw new Error('UI_LANG_INVALID');\nif (contentId && !/^[a-zA-Z0-9._:-]{1,120}$/.test(contentId)) throw new Error('CONTENT_ID_INVALID');\nif (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) throw new Error('EMAIL_INVALID');\nif (category === 'OTHER' && !description && !item.binary?.audio) throw new Error('OTHER_DETAILS_REQUIRED');\nconst audioSize = Number(payload.audio?.size_bytes || 0);\nif (audioSize > 5 * 1024 * 1024) throw new Error('AUDIO_TOO_LARGE');\nconst origin = safeCell(input.headers?.origin, 200);\nconst allowedOrigin = safeCell(input.config_allowed_origin, 200);\nif (origin && allowedOrigin && origin !== allowedOrigin) throw new Error('ORIGIN_NOT_ALLOWED');\nconst audioMime = safeCell(payload.audio?.mime_type || item.binary?.audio?.mimeType, 100);\nconst extension = audioMime.includes('mp4') ? 'm4a' : audioMime.includes('ogg') ? 'ogg' : 'webm';\nconst priority = category === 'TECHNICAL' ? 'HIGH' : category === 'OTHER' ? 'LOW' : 'NORMAL';\nreturn [{\n  json: {\n    _config_sheet_id: input.config_sheet_id,\n    _config_sheet_name: input.config_sheet_name,\n    _config_audio_folder_id: input.config_audio_folder_id,\n    _config_allowed_origin: allowedOrigin,\n    schema_version: String(payload.schema_version || 1),\n    feedback_id: feedbackId,\n    received_at_utc: new Date().toISOString(),\n    status: 'NEW',\n    priority,\n    ui_lang: uiLang,\n    content_id: contentId,\n    issue_category: category,\n    issue_code: issueCode,\n    description,\n    audio_url: '',\n    audio_status: item.binary?.audio ? 'PENDING_UPLOAD' : 'NONE',\n    audio_mime_type: audioMime,\n    audio_size_bytes: audioSize || '',\n    audio_duration_seconds: Number(payload.audio?.duration_seconds || 0) || '',\n    email,\n    contact_allowed: email ? 'TRUE' : 'FALSE',\n    platform: safeCell(payload.platform, 40),\n    app_version: safeCell(payload.app_version, 40),\n    page_path: safeCell(payload.page_context?.path, 300),\n    user_agent: safeCell(payload.page_context?.user_agent, 500),\n    source_origin: origin,\n    assigned_to: '',\n    resolution_note: '',\n    resolved_at: '',\n    duplicate_of: '',\n    has_audio: Boolean(item.binary?.audio),\n    audio_file_name: `${feedbackId}.${extension}`\n  },\n  binary: item.binary\n}];"
+        "jsCode": "const item = $input.first();\nconst input = item.json || {};\nconst body = input.body && typeof input.body === 'object' ? input.body : input;\nlet rawPayload = body.payload ?? input.payload;\nif (rawPayload == null && body.schema_version) rawPayload = body;\nif (rawPayload == null) throw new Error('PAYLOAD_MISSING');\nlet payload;\ntry {\n  payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n} catch {\n  throw new Error('PAYLOAD_INVALID_JSON');\n}\nif (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('PAYLOAD_INVALID');\nconst allowedCategories = new Set(['AUDIO', 'VISUAL', 'CONTENT', 'EXERCISE', 'TECHNICAL', 'OTHER']);\nconst allowedContentTypes = new Set(['video', 'exercisetest', 'exercisematching', 'exerciseopen', 'general']);\nconst allowedLanguages = new Set(['uk', 'en', 'es', 'de']);\nconst safeCell = (value, max = 1200) => {\n  if (value === null || value === undefined) return '';\n  let text = String(value).replace(/\\u0000/g, '').trim().slice(0, max);\n  if (/^[=+\\-@]/.test(text)) text = `\\'${text}`;\n  return text;\n};\nconst feedbackId = safeCell(payload.feedback_id, 80);\nconst category = safeCell(payload.issue_category, 32).toUpperCase();\nconst issueCode = safeCell(payload.issue_code, 80).toUpperCase();\nconst uiLang = safeCell(payload.ui_lang || 'uk', 12).toLowerCase();\nconst contentId = safeCell(payload.content_id, 120);\nconst contentType = safeCell(payload.content_type || 'general', 40).toLowerCase();\nconst videoTimestamp = safeCell(payload.video_timestamp, 20);\nconst description = safeCell(payload.description, 1200);\nconst email = safeCell(payload.email, 254);\nif (!feedbackId || !/^[a-zA-Z0-9._:-]{8,80}$/.test(feedbackId)) throw new Error('FEEDBACK_ID_INVALID');\nif (!allowedCategories.has(category)) throw new Error('ISSUE_CATEGORY_INVALID');\nif (!issueCode || !issueCode.startsWith(category + '_')) throw new Error('ISSUE_CODE_INVALID');\nif (!allowedLanguages.has(uiLang)) throw new Error('UI_LANG_INVALID');\nif (!allowedContentTypes.has(contentType)) throw new Error('CONTENT_TYPE_INVALID');\nif (videoTimestamp && !/^[0-9:]{1,20}$/.test(videoTimestamp)) throw new Error('VIDEO_TIMESTAMP_INVALID');\nif (contentId && !/^[a-zA-Z0-9._:-]{1,120}$/.test(contentId)) throw new Error('CONTENT_ID_INVALID');\nif (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) throw new Error('EMAIL_INVALID');\nif (category === 'OTHER' && !description && !item.binary?.audio) throw new Error('OTHER_DETAILS_REQUIRED');\nconst audioSize = Number(payload.audio?.size_bytes || 0);\nif (audioSize > 5 * 1024 * 1024) throw new Error('AUDIO_TOO_LARGE');\nconst origin = safeCell(input.headers?.origin, 200);\nconst allowedOrigin = safeCell(input.config_allowed_origin, 200);\nif (origin && allowedOrigin && origin !== allowedOrigin) throw new Error('ORIGIN_NOT_ALLOWED');\nconst audioMime = safeCell(payload.audio?.mime_type || item.binary?.audio?.mimeType, 100);\nconst extension = audioMime.includes('mp4') ? 'm4a' : audioMime.includes('ogg') ? 'ogg' : 'webm';\nconst priority = category === 'TECHNICAL' ? 'HIGH' : category === 'OTHER' ? 'LOW' : 'NORMAL';\nreturn [{\n  json: {\n    _config_sheet_id: input.config_sheet_id,\n    _config_sheet_name: input.config_sheet_name,\n    _config_audio_folder_id: input.config_audio_folder_id,\n    _config_allowed_origin: allowedOrigin,\n    schema_version: String(payload.schema_version || 1),\n    feedback_id: feedbackId,\n    received_at_utc: new Date().toISOString(),\n    status: 'NEW',\n    priority,\n    ui_lang: uiLang,\n    content_id: contentId,\n    content_type: contentType,\n    issue_category: category,\n    issue_code: issueCode,\n    video_timestamp: videoTimestamp,\n    description,\n    audio_url: '',\n    audio_status: item.binary?.audio ? 'PENDING_UPLOAD' : 'NONE',\n    audio_mime_type: audioMime,\n    audio_size_bytes: audioSize || '',\n    audio_duration_seconds: Number(payload.audio?.duration_seconds || 0) || '',\n    email,\n    contact_allowed: email ? 'TRUE' : 'FALSE',\n    platform: safeCell(payload.platform, 40),\n    app_version: safeCell(payload.app_version, 40),\n    page_path: safeCell(payload.page_context?.path, 300),\n    user_agent: safeCell(payload.page_context?.user_agent, 500),\n    source_origin: origin,\n    assigned_to: '',\n    resolution_note: '',\n    resolved_at: '',\n    duplicate_of: '',\n    has_audio: Boolean(item.binary?.audio),\n    audio_file_name: `${feedbackId}.${extension}`\n  },\n  binary: item.binary\n}];"
       },
       "id": "a72b64ec-75fa-46b7-8afd-e90c7db97a43",
       "name": "Normalize & Validate",
@@ -189,8 +189,10 @@
             "priority": "={{ $json.priority }}",
             "ui_lang": "={{ $json.ui_lang }}",
             "content_id": "={{ $json.content_id }}",
+            "content_type": "={{ $json.content_type }}",
             "issue_category": "={{ $json.issue_category }}",
             "issue_code": "={{ $json.issue_code }}",
+            "video_timestamp": "={{ $json.video_timestamp }}",
             "description": "={{ $json.description }}",
             "audio_url": "={{ $json.audio_url }}",
             "audio_status": "={{ $json.audio_status }}",
@@ -211,32 +213,258 @@
           },
           "matchingColumns": [],
           "schema": [
-            { "id": "schema_version", "displayName": "schema_version", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "feedback_id", "displayName": "feedback_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "received_at_utc", "displayName": "received_at_utc", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "priority", "displayName": "priority", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "ui_lang", "displayName": "ui_lang", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "content_id", "displayName": "content_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "issue_category", "displayName": "issue_category", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "issue_code", "displayName": "issue_code", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "description", "displayName": "description", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "audio_url", "displayName": "audio_url", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "audio_status", "displayName": "audio_status", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "audio_mime_type", "displayName": "audio_mime_type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "audio_size_bytes", "displayName": "audio_size_bytes", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "audio_duration_seconds", "displayName": "audio_duration_seconds", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "email", "displayName": "email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "contact_allowed", "displayName": "contact_allowed", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "platform", "displayName": "platform", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "app_version", "displayName": "app_version", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "page_path", "displayName": "page_path", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "user_agent", "displayName": "user_agent", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "source_origin", "displayName": "source_origin", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "assigned_to", "displayName": "assigned_to", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "resolution_note", "displayName": "resolution_note", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "resolved_at", "displayName": "resolved_at", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "duplicate_of", "displayName": "duplicate_of", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "schema_version",
+              "displayName": "schema_version",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "feedback_id",
+              "displayName": "feedback_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at_utc",
+              "displayName": "received_at_utc",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ui_lang",
+              "displayName": "ui_lang",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content_id",
+              "displayName": "content_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content_type",
+              "displayName": "content_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "issue_category",
+              "displayName": "issue_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "issue_code",
+              "displayName": "issue_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "video_timestamp",
+              "displayName": "video_timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "audio_url",
+              "displayName": "audio_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "audio_status",
+              "displayName": "audio_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "audio_mime_type",
+              "displayName": "audio_mime_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "audio_size_bytes",
+              "displayName": "audio_size_bytes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "audio_duration_seconds",
+              "displayName": "audio_duration_seconds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact_allowed",
+              "displayName": "contact_allowed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "platform",
+              "displayName": "platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "app_version",
+              "displayName": "app_version",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "page_path",
+              "displayName": "page_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_agent",
+              "displayName": "user_agent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_origin",
+              "displayName": "source_origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assigned_to",
+              "displayName": "assigned_to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolution_note",
+              "displayName": "resolution_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolved_at",
+              "displayName": "resolved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "duplicate_of",
+              "displayName": "duplicate_of",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
