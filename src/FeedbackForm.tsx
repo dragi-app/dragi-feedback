@@ -26,200 +26,307 @@ import {
   useState,
 } from "react";
 
-type Lang = "uk" | "en";
-type IssueId =
-  | "audio"
-  | "visual"
-  | "content"
-  | "exercise"
-  | "technical"
-  | "other";
+type Lang = "uk" | "en" | "es" | "de";
+type ContentType =
+  | "video"
+  | "exercisetest"
+  | "exercisematching"
+  | "exerciseopen"
+  | "general";
+type IssueCategory =
+  | "AUDIO"
+  | "VISUAL"
+  | "CONTENT"
+  | "EXERCISE"
+  | "TECHNICAL"
+  | "OTHER";
+type LocalizedText = Record<Lang, string>;
 
 type QueryContext = {
   lang: Lang;
   contentId: string;
+  contentType: ContentType;
 };
 
 type IssueDefinition = {
-  id: IssueId;
   code: string;
+  category: IssueCategory;
   icon: LucideIcon;
-  label: Record<Lang, string>;
-  details: Array<{
-    code: string;
-    label: Record<Lang, string>;
-  }>;
+  label: LocalizedText;
 };
+
+const t = (uk: string, en: string, es: string, de: string): LocalizedText => ({
+  uk,
+  en,
+  es,
+  de,
+});
 
 const COPY = {
   uk: {
     eyebrow: "DRAGI FEEDBACK",
-    title: "Повідомити про проблему",
-    intro:
-      "Оберіть, що саме потребує виправлення. Деталі можна додати за бажанням.",
     material: "Матеріал",
-    unknownMaterial: "Загальний відгук",
-    categoryLabel: "Категорія проблеми",
-    detailTitle: "Що саме сталося?",
-    detailOptional: "Необов’язково",
+    problemLabel: "Що саме сталося?",
     descriptionLabel: "Додаткові деталі",
     descriptionPlaceholder: "Коротко опишіть, що потрібно перевірити",
+    timestampLabel: "Час у відео",
+    timestampPlaceholder: "Наприклад, 01:23",
+    timestampHint: "Якщо проблема виникла у конкретний момент",
     voiceTitle: "Голосове повідомлення",
     voiceHint: "До 60 секунд",
     record: "Записати",
     stop: "Зупинити",
     remove: "Видалити запис",
     emailLabel: "Email для відповіді",
-    emailHint: "Необов’язково. Тільки якщо можна з вами зв’язатися.",
+    emailHint: "Залиште, лише якщо можна з вами зв’язатися.",
     emailPlaceholder: "name@example.com",
+    optional: "Необов’язково",
+    required: "Обов’язково",
     submit: "Надіслати",
     sending: "Надсилаємо...",
-    selectIssue: "Спочатку оберіть категорію",
-    otherNeedsDetails:
-      "Для категорії «Інше» додайте текст або голосове повідомлення.",
+    selectIssue: "Оберіть, що саме сталося",
+    otherNeedsDetails: "Для варіанта «Інше» додайте текст або голосове повідомлення.",
     audioUnsupported: "Цей браузер не підтримує запис аудіо.",
     microphoneDenied: "Не вдалося отримати доступ до мікрофона.",
     submitError: "Не вдалося надіслати. Спробуйте ще раз.",
     successTitle: "Дякуємо. Повідомлення отримано.",
-    successText:
-      "Ми зберегли контекст матеріалу, тому зможемо швидко перевірити проблему.",
+    successText: "Ми зберегли контекст матеріалу й зможемо швидко перевірити проблему.",
     sendAnother: "Повідомити ще",
     demo: "Демонстраційний режим: дані поки не передаються у n8n.",
     characters: "символів",
+    urgentSupport: "Термінова проблема з підпискою або оплатою?",
+    supportEmail: "Написати на email",
+    supportTelegram: "Telegram",
   },
   en: {
     eyebrow: "DRAGI FEEDBACK",
-    title: "Report a problem",
-    intro:
-      "Choose what needs attention. You can add more details if you want.",
     material: "Content",
-    unknownMaterial: "General feedback",
-    categoryLabel: "Problem category",
-    detailTitle: "What happened?",
-    detailOptional: "Optional",
+    problemLabel: "What exactly happened?",
     descriptionLabel: "Additional details",
     descriptionPlaceholder: "Briefly describe what we should check",
+    timestampLabel: "Time in the video",
+    timestampPlaceholder: "For example, 01:23",
+    timestampHint: "If the problem occurs at a specific moment",
     voiceTitle: "Voice message",
     voiceHint: "Up to 60 seconds",
     record: "Record",
     stop: "Stop",
     remove: "Delete recording",
     emailLabel: "Email for a reply",
-    emailHint: "Optional. Only if we may contact you.",
+    emailHint: "Leave it only if we may contact you.",
     emailPlaceholder: "name@example.com",
+    optional: "Optional",
+    required: "Required",
     submit: "Send",
     sending: "Sending...",
-    selectIssue: "Choose a category first",
-    otherNeedsDetails: "Add text or a voice message for the Other category.",
+    selectIssue: "Choose what happened",
+    otherNeedsDetails: "For Other, add text or a voice message.",
     audioUnsupported: "Audio recording is not supported by this browser.",
     microphoneDenied: "Microphone access was not granted.",
     submitError: "Could not send your feedback. Please try again.",
     successTitle: "Thank you. Your report was received.",
-    successText:
-      "We saved the content context, so the problem can be checked quickly.",
+    successText: "We saved the content context so the problem can be checked quickly.",
     sendAnother: "Send another report",
     demo: "Demo mode: data is not being sent to n8n yet.",
     characters: "characters",
+    urgentSupport: "Urgent subscription or payment problem?",
+    supportEmail: "Email us",
+    supportTelegram: "Telegram",
+  },
+  es: {
+    eyebrow: "DRAGI FEEDBACK",
+    material: "Contenido",
+    problemLabel: "¿Qué ha ocurrido exactamente?",
+    descriptionLabel: "Detalles adicionales",
+    descriptionPlaceholder: "Describe brevemente qué debemos revisar",
+    timestampLabel: "Momento del vídeo",
+    timestampPlaceholder: "Por ejemplo, 01:23",
+    timestampHint: "Si el problema aparece en un momento concreto",
+    voiceTitle: "Mensaje de voz",
+    voiceHint: "Hasta 60 segundos",
+    record: "Grabar",
+    stop: "Detener",
+    remove: "Eliminar grabación",
+    emailLabel: "Email para responder",
+    emailHint: "Déjalo solo si podemos contactarte.",
+    emailPlaceholder: "nombre@ejemplo.com",
+    optional: "Opcional",
+    required: "Obligatorio",
+    submit: "Enviar",
+    sending: "Enviando...",
+    selectIssue: "Elige qué ha ocurrido",
+    otherNeedsDetails: "Para «Otro», añade texto o un mensaje de voz.",
+    audioUnsupported: "Este navegador no permite grabar audio.",
+    microphoneDenied: "No se ha podido acceder al micrófono.",
+    submitError: "No se ha podido enviar. Inténtalo de nuevo.",
+    successTitle: "Gracias. Hemos recibido tu mensaje.",
+    successText: "Hemos guardado el contexto para revisar el problema rápidamente.",
+    sendAnother: "Enviar otro mensaje",
+    demo: "Modo de demostración: los datos todavía no se envían a n8n.",
+    characters: "caracteres",
+    urgentSupport: "¿Problema urgente con la suscripción o el pago?",
+    supportEmail: "Escríbenos",
+    supportTelegram: "Telegram",
+  },
+  de: {
+    eyebrow: "DRAGI FEEDBACK",
+    material: "Inhalt",
+    problemLabel: "Was genau ist passiert?",
+    descriptionLabel: "Zusätzliche Details",
+    descriptionPlaceholder: "Beschreibe kurz, was wir prüfen sollen",
+    timestampLabel: "Zeitpunkt im Video",
+    timestampPlaceholder: "Zum Beispiel 01:23",
+    timestampHint: "Falls das Problem an einer bestimmten Stelle auftritt",
+    voiceTitle: "Sprachnachricht",
+    voiceHint: "Bis zu 60 Sekunden",
+    record: "Aufnehmen",
+    stop: "Stoppen",
+    remove: "Aufnahme löschen",
+    emailLabel: "E-Mail für eine Antwort",
+    emailHint: "Nur angeben, wenn wir dich kontaktieren dürfen.",
+    emailPlaceholder: "name@beispiel.de",
+    optional: "Optional",
+    required: "Erforderlich",
+    submit: "Senden",
+    sending: "Wird gesendet...",
+    selectIssue: "Wähle aus, was passiert ist",
+    otherNeedsDetails: "Füge bei „Sonstiges“ Text oder eine Sprachnachricht hinzu.",
+    audioUnsupported: "Dieser Browser unterstützt keine Audioaufnahme.",
+    microphoneDenied: "Der Zugriff auf das Mikrofon wurde nicht erlaubt.",
+    submitError: "Senden fehlgeschlagen. Bitte versuche es erneut.",
+    successTitle: "Danke. Deine Meldung ist eingegangen.",
+    successText: "Wir haben den Kontext gespeichert und können das Problem schnell prüfen.",
+    sendAnother: "Weitere Meldung senden",
+    demo: "Demo-Modus: Die Daten werden noch nicht an n8n gesendet.",
+    characters: "Zeichen",
+    urgentSupport: "Dringendes Problem mit Abo oder Zahlung?",
+    supportEmail: "E-Mail senden",
+    supportTelegram: "Telegram",
   },
 } satisfies Record<Lang, Record<string, string>>;
 
-const ISSUES: IssueDefinition[] = [
-  {
-    id: "audio",
-    code: "AUDIO",
-    icon: Volume2,
-    label: { uk: "Звук та озвучення", en: "Audio or voiceover" },
-    details: [
-      { code: "AUDIO_MISSING", label: { uk: "Немає звуку", en: "No sound" } },
-      { code: "AUDIO_QUALITY", label: { uk: "Погана якість", en: "Poor quality" } },
-      { code: "AUDIO_WRONG_VOICEOVER", label: { uk: "Помилка в озвученні", en: "Wrong voiceover" } },
-      { code: "AUDIO_PRONUNCIATION", label: { uk: "Вимова або мова", en: "Pronunciation or language" } },
-      { code: "AUDIO_SYNC", label: { uk: "Не збігається з відео", en: "Out of sync" } },
-    ],
+const CONTENT_COPY: Record<
+  ContentType,
+  { label: LocalizedText; title: LocalizedText; intro: LocalizedText }
+> = {
+  video: {
+    label: t("Відео", "Video", "Vídeo", "Video"),
+    title: t("Що сталося з відео?", "What happened with the video?", "¿Qué ha ocurrido con el vídeo?", "Was ist mit dem Video passiert?"),
+    intro: t("Оберіть проблему — за потреби додайте деталі.", "Choose the problem and add details if needed.", "Elige el problema y añade detalles si hace falta.", "Wähle das Problem und ergänze bei Bedarf Details."),
   },
-  {
-    id: "visual",
-    code: "VISUAL",
-    icon: ImageIcon,
-    label: { uk: "Візуальне відображення", en: "Visual display" },
-    details: [
-      { code: "VISUAL_MISSING", label: { uk: "Не відображається", en: "Not displayed" } },
-      { code: "VISUAL_WRONG", label: { uk: "Неправильне зображення", en: "Wrong image" } },
-      { code: "VISUAL_CROP", label: { uk: "Обрізано або перекрито", en: "Cropped or covered" } },
-      { code: "VISUAL_QUALITY", label: { uk: "Погана якість", en: "Poor quality" } },
-      { code: "VISUAL_ANIMATION", label: { uk: "Помилка анімації", en: "Animation problem" } },
-    ],
+  exercisetest: {
+    label: t("Тестова вправа", "Test exercise", "Ejercicio tipo test", "Testaufgabe"),
+    title: t("Що сталося у вправі?", "What happened in the exercise?", "¿Qué ha ocurrido en el ejercicio?", "Was ist bei der Aufgabe passiert?"),
+    intro: t("Оберіть конкретну проблему — решта полів необов’язкові.", "Choose the exact problem. The remaining fields are optional.", "Elige el problema exacto. Los demás campos son opcionales.", "Wähle das genaue Problem. Alle weiteren Felder sind optional."),
   },
-  {
-    id: "content",
-    code: "CONTENT",
-    icon: FileText,
-    label: { uk: "Текст і зміст", en: "Text and content" },
-    details: [
-      { code: "CONTENT_TYPO", label: { uk: "Помилка в тексті", en: "Text error" } },
-      { code: "CONTENT_TRANSLATION", label: { uk: "Помилка перекладу", en: "Translation error" } },
-      { code: "CONTENT_EXPLANATION", label: { uk: "Неточне пояснення", en: "Incorrect explanation" } },
-      { code: "CONTENT_GRAMMAR", label: { uk: "Граматика або факт", en: "Grammar or fact" } },
-    ],
+  exercisematching: {
+    label: t("Вправа на відповідність", "Matching exercise", "Ejercicio de asociación", "Zuordnungsaufgabe"),
+    title: t("Що сталося у вправі?", "What happened in the exercise?", "¿Qué ha ocurrido en el ejercicio?", "Was ist bei der Aufgabe passiert?"),
+    intro: t("Оберіть конкретну проблему — решта полів необов’язкові.", "Choose the exact problem. The remaining fields are optional.", "Elige el problema exacto. Los demás campos son opcionales.", "Wähle das genaue Problem. Alle weiteren Felder sind optional."),
   },
-  {
-    id: "exercise",
-    code: "EXERCISE",
-    icon: ListChecks,
-    label: { uk: "Завдання або відповідь", en: "Task or answer" },
-    details: [
-      { code: "EXERCISE_INSTRUCTION", label: { uk: "Умова завдання", en: "Task instruction" } },
-      { code: "EXERCISE_OPTIONS", label: { uk: "Варіанти відповіді", en: "Answer options" } },
-      { code: "EXERCISE_CORRECT_ANSWER", label: { uk: "Правильна відповідь", en: "Correct answer" } },
-      { code: "EXERCISE_VALIDATION", label: { uk: "Перевірка відповіді", en: "Answer validation" } },
-    ],
+  exerciseopen: {
+    label: t("Вправа з відкритою відповіддю", "Open-answer exercise", "Ejercicio de respuesta abierta", "Aufgabe mit offener Antwort"),
+    title: t("Що сталося у вправі?", "What happened in the exercise?", "¿Qué ha ocurrido en el ejercicio?", "Was ist bei der Aufgabe passiert?"),
+    intro: t("Оберіть конкретну проблему — решта полів необов’язкові.", "Choose the exact problem. The remaining fields are optional.", "Elige el problema exacto. Los demás campos son opcionales.", "Wähle das genaue Problem. Alle weiteren Felder sind optional."),
   },
-  {
-    id: "technical",
-    code: "TECHNICAL",
-    icon: TriangleAlert,
-    label: { uk: "Технічна проблема", en: "Technical problem" },
-    details: [
-      { code: "TECHNICAL_LOADING", label: { uk: "Не завантажується", en: "Does not load" } },
-      { code: "TECHNICAL_FREEZE", label: { uk: "Зависає", en: "Freezes" } },
-      { code: "TECHNICAL_CONTROL", label: { uk: "Кнопка не працює", en: "Control does not work" } },
-      { code: "TECHNICAL_PROGRESS", label: { uk: "Не зберігає прогрес", en: "Progress not saved" } },
-    ],
+  general: {
+    label: t("Загальний відгук", "General feedback", "Comentario general", "Allgemeines Feedback"),
+    title: t("Повідомити про проблему", "Report a problem", "Informar de un problema", "Problem melden"),
+    intro: t("Оберіть найближчий варіант або залиште загальний відгук.", "Choose the closest option or leave general feedback.", "Elige la opción más adecuada o deja un comentario general.", "Wähle die passende Option oder hinterlasse allgemeines Feedback."),
   },
-  {
-    id: "other",
-    code: "OTHER",
-    icon: MessageCircleMore,
-    label: { uk: "Інше", en: "Other" },
-    details: [],
-  },
-];
+};
+
+const otherIssue: IssueDefinition = {
+  code: "OTHER_GENERAL",
+  category: "OTHER",
+  icon: MessageCircleMore,
+  label: t("Інше", "Other", "Otro", "Sonstiges"),
+};
+
+const ISSUES_BY_CONTENT_TYPE: Record<ContentType, IssueDefinition[]> = {
+  video: [
+    { code: "AUDIO_MISSING", category: "AUDIO", icon: Volume2, label: t("Немає звуку", "No sound", "No hay sonido", "Kein Ton") },
+    { code: "AUDIO_QUALITY", category: "AUDIO", icon: Volume2, label: t("Погана якість звуку", "Poor sound quality", "Mala calidad de sonido", "Schlechte Tonqualität") },
+    { code: "AUDIO_WRONG_VOICEOVER", category: "AUDIO", icon: Volume2, label: t("Помилка в озвученні", "Voiceover error", "Error en la locución", "Fehler in der Vertonung") },
+    { code: "VISUAL_PLAYBACK", category: "VISUAL", icon: ImageIcon, label: t("Проблема із зображенням", "Video display problem", "Problema de imagen", "Problem mit der Darstellung") },
+    { code: "TECHNICAL_LOADING", category: "TECHNICAL", icon: TriangleAlert, label: t("Відео не завантажується", "Video does not load", "El vídeo no carga", "Video lädt nicht") },
+    { code: "CONTENT_INCORRECT", category: "CONTENT", icon: FileText, label: t("Помилка у змісті", "Content error", "Error en el contenido", "Inhaltlicher Fehler") },
+    { code: "CONTENT_SUBTITLES", category: "CONTENT", icon: FileText, label: t("Помилка в тексті або субтитрах", "Text or subtitle error", "Error en texto o subtítulos", "Fehler in Text oder Untertiteln") },
+    otherIssue,
+  ],
+  exercisetest: [
+    { code: "EXERCISE_INSTRUCTION", category: "EXERCISE", icon: ListChecks, label: t("Помилка в умові", "Task instruction error", "Error en el enunciado", "Fehler in der Aufgabenstellung") },
+    { code: "EXERCISE_OPTIONS", category: "EXERCISE", icon: ListChecks, label: t("Проблема у варіантах відповіді", "Problem with answer options", "Problema con las opciones", "Problem mit den Antwortoptionen") },
+    { code: "EXERCISE_CORRECT_ANSWER", category: "EXERCISE", icon: ListChecks, label: t("Неправильна правильна відповідь", "Wrong correct answer", "Respuesta correcta incorrecta", "Falsche richtige Antwort") },
+    { code: "CONTENT_EXPLANATION", category: "CONTENT", icon: FileText, label: t("Помилка в поясненні", "Explanation error", "Error en la explicación", "Fehler in der Erklärung") },
+    { code: "VISUAL_MISSING", category: "VISUAL", icon: ImageIcon, label: t("Проблема із зображенням", "Image problem", "Problema con la imagen", "Problem mit dem Bild") },
+    { code: "TECHNICAL_CONTROL", category: "TECHNICAL", icon: TriangleAlert, label: t("Відповідь або кнопка не працює", "Answer or button does not work", "La respuesta o el botón no funciona", "Antwort oder Schaltfläche funktioniert nicht") },
+    otherIssue,
+  ],
+  exercisematching: [
+    { code: "EXERCISE_INSTRUCTION", category: "EXERCISE", icon: ListChecks, label: t("Помилка в умові", "Task instruction error", "Error en el enunciado", "Fehler in der Aufgabenstellung") },
+    { code: "EXERCISE_MATCHING_PAIRS", category: "EXERCISE", icon: ListChecks, label: t("Неправильні пари", "Incorrect pairs", "Pares incorrectos", "Falsche Paare") },
+    { code: "EXERCISE_MATCHING_CONTROL", category: "EXERCISE", icon: ListChecks, label: t("Не працює зіставлення", "Matching does not work", "La asociación no funciona", "Zuordnung funktioniert nicht") },
+    { code: "CONTENT_EXPLANATION", category: "CONTENT", icon: FileText, label: t("Помилка в поясненні", "Explanation error", "Error en la explicación", "Fehler in der Erklärung") },
+    { code: "VISUAL_MISSING", category: "VISUAL", icon: ImageIcon, label: t("Проблема із зображенням", "Image problem", "Problema con la imagen", "Problem mit dem Bild") },
+    { code: "TECHNICAL_LOADING", category: "TECHNICAL", icon: TriangleAlert, label: t("Вправа не завантажується", "Exercise does not load", "El ejercicio no carga", "Aufgabe lädt nicht") },
+    otherIssue,
+  ],
+  exerciseopen: [
+    { code: "EXERCISE_INSTRUCTION", category: "EXERCISE", icon: ListChecks, label: t("Помилка в умові", "Task instruction error", "Error en el enunciado", "Fehler in der Aufgabenstellung") },
+    { code: "EXERCISE_VALIDATION", category: "EXERCISE", icon: ListChecks, label: t("Неправильна перевірка відповіді", "Incorrect answer validation", "Validación incorrecta", "Falsche Antwortprüfung") },
+    { code: "EXERCISE_CORRECT_ANSWER", category: "EXERCISE", icon: ListChecks, label: t("Проблема з правильною відповіддю", "Correct answer problem", "Problema con la respuesta correcta", "Problem mit der richtigen Antwort") },
+    { code: "CONTENT_EXPLANATION", category: "CONTENT", icon: FileText, label: t("Помилка в поясненні", "Explanation error", "Error en la explicación", "Fehler in der Erklärung") },
+    { code: "TECHNICAL_CONTROL", category: "TECHNICAL", icon: TriangleAlert, label: t("Поле або кнопка не працює", "Field or button does not work", "El campo o el botón no funciona", "Feld oder Schaltfläche funktioniert nicht") },
+    otherIssue,
+  ],
+  general: [
+    { code: "CONTENT_GENERAL", category: "CONTENT", icon: FileText, label: t("Помилка у змісті", "Content problem", "Problema de contenido", "Inhaltliches Problem") },
+    { code: "VISUAL_GENERAL", category: "VISUAL", icon: ImageIcon, label: t("Проблема із зображенням", "Visual problem", "Problema visual", "Visuelles Problem") },
+    { code: "TECHNICAL_GENERAL", category: "TECHNICAL", icon: TriangleAlert, label: t("Технічна проблема", "Technical problem", "Problema técnico", "Technisches Problem") },
+    otherIssue,
+  ],
+};
+
+const CONTENT_TYPE_ALIASES: Record<string, ContentType> = {
+  video: "video",
+  exercisetest: "exercisetest",
+  exercise_test: "exercisetest",
+  test: "exercisetest",
+  exercisematching: "exercisematching",
+  exercise_matching: "exercisematching",
+  matching: "exercisematching",
+  exerciseopen: "exerciseopen",
+  exercise_open: "exerciseopen",
+  open: "exerciseopen",
+  general: "general",
+};
 
 const BASE_URL = import.meta.env.BASE_URL || "./";
 const WEBHOOK_URL = import.meta.env.VITE_FEEDBACK_WEBHOOK_URL?.trim();
 
 function readQueryContext(): QueryContext {
   if (typeof window === "undefined") {
-    return { lang: "uk", contentId: "" };
+    return { lang: "uk", contentId: "", contentType: "general" };
   }
 
-  const params = new URLSearchParams(window.location.search);
-  let rawLang = params.get("lang") || "uk";
-  let contentId = params.get("content_id") || "";
-
-  // Also accepts the temporary legacy format: ?lang=uk?content_id=25439
-  if (!contentId && rawLang.includes("?")) {
-    const [langPart, legacyQuery = ""] = rawLang.split("?", 2);
-    rawLang = langPart;
-    contentId = new URLSearchParams(legacyQuery).get("content_id") || "";
-  }
-
-  const normalizedLang = rawLang.toLowerCase().split("-")[0];
-  const lang: Lang = normalizedLang === "en" ? "en" : "uk";
+  // Accept the canonical `&` separator and the early integration format with repeated `?`.
+  const normalizedSearch = window.location.search.replace(/^\?/, "").replace(/\?/g, "&");
+  const params = new URLSearchParams(normalizedSearch);
+  const rawLang = (params.get("lan") || params.get("lang") || "uk")
+    .toLowerCase()
+    .split("-")[0];
+  const lang: Lang = (["uk", "en", "es", "de"] as const).includes(rawLang as Lang)
+    ? (rawLang as Lang)
+    : "uk";
+  const rawContentType = (params.get("content_type") || "general").toLowerCase();
 
   return {
     lang,
-    contentId: contentId.replace(/[^a-zA-Z0-9._:-]/g, "").slice(0, 120),
+    contentId: (params.get("content_id") || "")
+      .replace(/[^a-zA-Z0-9._:-]/g, "")
+      .slice(0, 120),
+    contentType: CONTENT_TYPE_ALIASES[rawContentType] || "general",
   };
 }
 
@@ -231,9 +338,7 @@ function formatDuration(totalSeconds: number) {
 
 function createFeedbackId() {
   const webCrypto = globalThis.crypto;
-  if (typeof webCrypto?.randomUUID === "function") {
-    return webCrypto.randomUUID();
-  }
+  if (typeof webCrypto?.randomUUID === "function") return webCrypto.randomUUID();
 
   const bytes = new Uint8Array(16);
   if (typeof webCrypto?.getRandomValues === "function") {
@@ -250,28 +355,18 @@ function createFeedbackId() {
   return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
 }
 
-function RiveMascot({
-  onReady,
-  onError,
-}: {
-  onReady: () => void;
-  onError: () => void;
-}) {
+function RiveMascot({ onReady, onError }: { onReady: () => void; onError: () => void }) {
   const { RiveComponent } = useRive({
     src: `${BASE_URL}dragi.riv`,
     autoplay: false,
     shouldDisableRiveListeners: true,
     isTouchScrollEnabled: true,
     onRiveReady: (rive) => {
-      const reduceMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduceMotion) {
         const animation = rive.stateMachineNames[0] || rive.animationNames[0];
         if (animation) rive.play(animation);
       }
-
       onReady();
     },
     onLoadError: onError,
@@ -293,21 +388,34 @@ function Mascot({ lang }: { lang: Lang }) {
       />
       {!riveFailed && (
         <div className={`mascot-rive ${riveLoaded ? "mascot-rive-visible" : ""}`}>
-          <RiveMascot
-            onReady={() => setRiveLoaded(true)}
-            onError={() => setRiveFailed(true)}
-          />
+          <RiveMascot onReady={() => setRiveLoaded(true)} onError={() => setRiveFailed(true)} />
         </div>
       )}
     </div>
   );
 }
 
+function SupportFooter({ lang }: { lang: Lang }) {
+  const copy = COPY[lang];
+  return (
+    <footer className="support-footer">
+      <span>{copy.urgentSupport}</span>
+      <nav aria-label={copy.urgentSupport}>
+        <a href="mailto:contact@dragi.app">{copy.supportEmail}</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://t.me/dragi_support" target="_blank" rel="noreferrer">
+          {copy.supportTelegram}
+        </a>
+      </nav>
+    </footer>
+  );
+}
+
 export default function FeedbackForm() {
-  const [context, setContext] = useState<QueryContext>({ lang: "uk", contentId: "" });
-  const [selectedIssue, setSelectedIssue] = useState<IssueId | null>(null);
-  const [selectedDetail, setSelectedDetail] = useState<string | null>(null);
+  const [context, setContext] = useState<QueryContext>({ lang: "uk", contentId: "", contentType: "general" });
+  const [selectedIssueCode, setSelectedIssueCode] = useState<string | null>(null);
   const [description, setDescription] = useState("");
+  const [videoTimestamp, setVideoTimestamp] = useState("");
   const [email, setEmail] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -332,31 +440,26 @@ export default function FeedbackForm() {
   }, []);
 
   const copy = COPY[context.lang];
+  const contentCopy = CONTENT_COPY[context.contentType];
+  const issues = ISSUES_BY_CONTENT_TYPE[context.contentType];
   const issue = useMemo(
-    () => ISSUES.find((item) => item.id === selectedIssue) || null,
-    [selectedIssue],
+    () => issues.find((item) => item.code === selectedIssueCode) || null,
+    [issues, selectedIssueCode],
   );
 
   const stopRecording = useCallback(() => {
     const recorder = recorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-    }
+    if (recorder && recorder.state !== "inactive") recorder.stop();
     setIsRecording(false);
   }, []);
 
   useEffect(() => {
     if (!isRecording) return;
-
     const timer = window.setInterval(() => {
-      const elapsed = Math.min(
-        60,
-        Math.floor((Date.now() - recordingStartedAtRef.current) / 1000),
-      );
+      const elapsed = Math.min(60, Math.floor((Date.now() - recordingStartedAtRef.current) / 1000));
       setRecordingSeconds(elapsed);
       if (elapsed >= 60) stopRecording();
     }, 250);
-
     return () => window.clearInterval(timer);
   }, [isRecording, stopRecording]);
 
@@ -383,33 +486,21 @@ export default function FeedbackForm() {
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-
-      const preferredTypes = [
-        "audio/webm;codecs=opus",
-        "audio/mp4",
-        "audio/webm",
-        "audio/ogg;codecs=opus",
-      ];
+      const preferredTypes = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
       const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
 
       recorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        const url = URL.createObjectURL(blob);
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         setAudioBlob(blob);
-        setAudioUrl(url);
+        setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       };
-
       recorder.start();
       recordingStartedAtRef.current = Date.now();
       setIsRecording(true);
@@ -428,9 +519,9 @@ export default function FeedbackForm() {
   }
 
   function resetForm() {
-    setSelectedIssue(null);
-    setSelectedDetail(null);
+    setSelectedIssueCode(null);
     setDescription("");
+    setVideoTimestamp("");
     setEmail("");
     removeAudio();
     setFormError("");
@@ -446,32 +537,30 @@ export default function FeedbackForm() {
       setFormError(copy.selectIssue);
       return;
     }
-
-    if (issue.id === "other" && !description.trim() && !audioBlob) {
+    if (issue.category === "OTHER" && !description.trim() && !audioBlob) {
       setFormError(copy.otherNeedsDetails);
       return;
     }
 
     setIsSubmitting(true);
-
     const feedbackId = createFeedbackId();
     const payload = {
-      schema_version: 1,
+      schema_version: 2,
       feedback_id: feedbackId,
       client_created_at: new Date().toISOString(),
       ui_lang: context.lang,
       content_id: context.contentId || null,
-      issue_category: issue.code,
-      issue_code: selectedDetail || `${issue.code}_GENERAL`,
+      content_type: context.contentType,
+      issue_category: issue.category,
+      issue_code: issue.code,
+      video_timestamp: context.contentType === "video" ? videoTimestamp.trim() || null : null,
       description: description.trim() || null,
       email: email.trim() || null,
       audio: audioBlob
         ? { mime_type: audioBlob.type, size_bytes: audioBlob.size, duration_seconds: recordingSeconds }
         : null,
-      page_context: {
-        path: window.location.pathname,
-        user_agent: navigator.userAgent,
-      },
+      platform: "app_webview",
+      page_context: { path: window.location.pathname, user_agent: navigator.userAgent },
     };
 
     try {
@@ -479,19 +568,13 @@ export default function FeedbackForm() {
         const data = new FormData();
         data.append("payload", JSON.stringify(payload));
         if (audioBlob) data.append("audio", audioBlob, `${feedbackId}.audio`);
-
-        const response = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          body: data,
-        });
-
+        const response = await fetch(WEBHOOK_URL, { method: "POST", body: data });
         if (!response.ok) throw new Error(`Webhook returned ${response.status}`);
         setDemoSubmission(false);
       } else {
         await new Promise((resolve) => window.setTimeout(resolve, 650));
         setDemoSubmission(true);
       }
-
       setIsSubmitted(true);
     } catch {
       setFormError(copy.submitError);
@@ -500,29 +583,30 @@ export default function FeedbackForm() {
     }
   }
 
+  const materialLabel = context.contentId
+    ? `${contentCopy.label[context.lang]} #${context.contentId}`
+    : contentCopy.label[context.lang];
+
   if (isSubmitted) {
     return (
       <main className="feedback-page">
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
-        <section className="success-card" aria-live="polite">
-          <div className="success-mark">
-            <Check aria-hidden="true" />
-          </div>
-          <p className="eyebrow">{copy.eyebrow}</p>
-          <h1>{copy.successTitle}</h1>
-          <p>{copy.successText}</p>
-          {context.contentId && (
-            <span className="material-pill">
-              {copy.material} #{context.contentId}
-            </span>
-          )}
-          {demoSubmission && <p className="demo-note">{copy.demo}</p>}
-          <button className="secondary-action" type="button" onClick={resetForm}>
-            <RotateCcw size={18} aria-hidden="true" />
-            {copy.sendAnother}
-          </button>
-        </section>
+        <div className="page-stack">
+          <section className="success-card" aria-live="polite">
+            <div className="success-mark"><Check aria-hidden="true" /></div>
+            <p className="eyebrow">{copy.eyebrow}</p>
+            <h1>{copy.successTitle}</h1>
+            <p>{copy.successText}</p>
+            <span className="material-pill">{materialLabel}</span>
+            {demoSubmission && <p className="demo-note">{copy.demo}</p>}
+            <button className="secondary-action" type="button" onClick={resetForm}>
+              <RotateCcw size={18} aria-hidden="true" />
+              {copy.sendAnother}
+            </button>
+          </section>
+          <SupportFooter lang={context.lang} />
+        </div>
       </main>
     );
   }
@@ -531,173 +615,139 @@ export default function FeedbackForm() {
     <main className="feedback-page">
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
-
-      <section className="feedback-card">
-        <Mascot lang={context.lang} />
-
-        <header className="form-header">
-          <div className="header-meta">
-            <p className="eyebrow">{copy.eyebrow}</p>
-            <span className="material-pill">
-              {context.contentId
-                ? `${copy.material} #${context.contentId}`
-                : copy.unknownMaterial}
-            </span>
-          </div>
-          <h1>{copy.title}</h1>
-          <p className="intro">{copy.intro}</p>
-        </header>
-
-        <form onSubmit={submitFeedback}>
-          <fieldset className="category-fieldset">
-            <legend>{copy.categoryLabel}</legend>
-            <div className="category-grid">
-              {ISSUES.map((item) => {
-                const Icon = item.icon;
-                const selected = selectedIssue === item.id;
-                return (
-                  <button
-                    className={`category-card ${selected ? "category-card-selected" : ""}`}
-                    type="button"
-                    key={item.id}
-                    aria-pressed={selected}
-                    onClick={() => {
-                      setSelectedIssue(item.id);
-                      setSelectedDetail(null);
-                      setFormError("");
-                    }}
-                  >
-                    <span className="category-icon">
-                      <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
-                    </span>
-                    <span>{item.label[context.lang]}</span>
-                    {selected && (
-                      <span className="selected-check">
-                        <Check size={13} strokeWidth={3} aria-hidden="true" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      <div className="page-stack">
+        <section className="feedback-card">
+          <Mascot lang={context.lang} />
+          <header className="form-header">
+            <div className="header-meta">
+              <p className="eyebrow">{copy.eyebrow}</p>
+              <span className="material-pill">{materialLabel}</span>
             </div>
-          </fieldset>
+            <h1>{contentCopy.title[context.lang]}</h1>
+            <p className="intro">{contentCopy.intro[context.lang]}</p>
+          </header>
 
-          {issue && (
-            <div className="details-panel">
-              {issue.details.length > 0 && (
-                <section className="detail-section" aria-labelledby="detail-title">
-                  <div className="section-heading">
-                    <h2 id="detail-title">{copy.detailTitle}</h2>
-                    <span>{copy.detailOptional}</span>
-                  </div>
-                  <div className="detail-chips">
-                    {issue.details.map((detail) => (
-                      <button
-                        key={detail.code}
-                        className={`detail-chip ${selectedDetail === detail.code ? "detail-chip-selected" : ""}`}
-                        type="button"
-                        aria-pressed={selectedDetail === detail.code}
-                        onClick={() =>
-                          setSelectedDetail((current) =>
-                            current === detail.code ? null : detail.code,
-                          )
-                        }
-                      >
-                        {detail.label[context.lang]}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section className="detail-section">
-                <label className="field-label" htmlFor="feedback-description">
-                  {copy.descriptionLabel}
-                  <span>{copy.detailOptional}</span>
-                </label>
-                <textarea
-                  id="feedback-description"
-                  value={description}
-                  maxLength={1200}
-                  rows={4}
-                  placeholder={copy.descriptionPlaceholder}
-                  onChange={(event) => setDescription(event.target.value)}
-                />
-                <p className="character-count">
-                  {description.length}/1200 {copy.characters}
-                </p>
-              </section>
-
-              <section className="detail-section audio-section">
-                <div className="section-heading">
-                  <div>
-                    <h2>{copy.voiceTitle}</h2>
-                    <p>{copy.voiceHint}</p>
-                  </div>
-                  <span>{copy.detailOptional}</span>
-                </div>
-
-                {!audioUrl ? (
-                  <button
-                    className={`record-button ${isRecording ? "record-button-active" : ""}`}
-                    type="button"
-                    onClick={isRecording ? stopRecording : startRecording}
-                  >
-                    {isRecording ? (
-                      <Square size={17} fill="currentColor" aria-hidden="true" />
-                    ) : (
-                      <Mic size={19} aria-hidden="true" />
-                    )}
-                    <span>{isRecording ? copy.stop : copy.record}</span>
-                    {isRecording && <strong>{formatDuration(recordingSeconds)}</strong>}
-                  </button>
-                ) : (
-                  <div className="audio-preview">
-                    <audio controls src={audioUrl} />
-                    <button type="button" onClick={removeAudio} aria-label={copy.remove}>
-                      <Trash2 size={18} aria-hidden="true" />
+          <form onSubmit={submitFeedback}>
+            <fieldset className="category-fieldset">
+              <legend>{copy.problemLabel}</legend>
+              <div className="category-grid">
+                {issues.map((item) => {
+                  const Icon = item.icon;
+                  const selected = selectedIssueCode === item.code;
+                  return (
+                    <button
+                      className={`category-card ${selected ? "category-card-selected" : ""}`}
+                      type="button"
+                      key={item.code}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        setSelectedIssueCode(item.code);
+                        setFormError("");
+                      }}
+                    >
+                      <span className="category-icon"><Icon size={22} strokeWidth={1.9} aria-hidden="true" /></span>
+                      <span>{item.label[context.lang]}</span>
+                      {selected && <span className="selected-check"><Check size={13} strokeWidth={3} aria-hidden="true" /></span>}
                     </button>
-                  </div>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {issue && (
+              <div className="details-panel">
+                {context.contentType === "video" && (
+                  <section className="detail-section">
+                    <label className="field-label" htmlFor="video-timestamp">
+                      {copy.timestampLabel}<span>{copy.optional}</span>
+                    </label>
+                    <p className="field-hint">{copy.timestampHint}</p>
+                    <input
+                      id="video-timestamp"
+                      className="text-input"
+                      type="text"
+                      inputMode="numeric"
+                      value={videoTimestamp}
+                      maxLength={8}
+                      placeholder={copy.timestampPlaceholder}
+                      onChange={(event) => setVideoTimestamp(event.target.value)}
+                    />
+                  </section>
                 )}
-                {audioError && <p className="inline-error">{audioError}</p>}
-              </section>
 
-              <section className="detail-section contact-section">
-                <label className="field-label" htmlFor="feedback-email">
-                  <span className="label-with-icon">
-                    <Mail size={17} aria-hidden="true" />
-                    {copy.emailLabel}
-                  </span>
-                  <span>{copy.detailOptional}</span>
-                </label>
-                <p className="field-hint">{copy.emailHint}</p>
-                <input
-                  id="feedback-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  value={email}
-                  maxLength={254}
-                  placeholder={copy.emailPlaceholder}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </section>
+                <section className="detail-section">
+                  <label className="field-label" htmlFor="feedback-description">
+                    {copy.descriptionLabel}
+                    <span>{issue.category === "OTHER" ? copy.required : copy.optional}</span>
+                  </label>
+                  <textarea
+                    id="feedback-description"
+                    value={description}
+                    maxLength={1200}
+                    rows={4}
+                    placeholder={copy.descriptionPlaceholder}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
+                  <p className="character-count">{description.length}/1200 {copy.characters}</p>
+                </section>
+
+                <section className="detail-section audio-section">
+                  <div className="section-heading">
+                    <div><h2>{copy.voiceTitle}</h2><p>{copy.voiceHint}</p></div>
+                    <span>{issue.category === "OTHER" ? copy.required : copy.optional}</span>
+                  </div>
+                  {!audioUrl ? (
+                    <button
+                      className={`record-button ${isRecording ? "record-button-active" : ""}`}
+                      type="button"
+                      onClick={isRecording ? stopRecording : startRecording}
+                    >
+                      {isRecording ? <Square size={17} fill="currentColor" aria-hidden="true" /> : <Mic size={19} aria-hidden="true" />}
+                      <span>{isRecording ? copy.stop : copy.record}</span>
+                      {isRecording && <strong>{formatDuration(recordingSeconds)}</strong>}
+                    </button>
+                  ) : (
+                    <div className="audio-preview">
+                      <audio controls src={audioUrl} />
+                      <button type="button" onClick={removeAudio} aria-label={copy.remove}>
+                        <Trash2 size={18} aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
+                  {audioError && <p className="inline-error">{audioError}</p>}
+                </section>
+
+                <section className="detail-section contact-section">
+                  <label className="field-label" htmlFor="feedback-email">
+                    <span className="label-with-icon"><Mail size={17} aria-hidden="true" />{copy.emailLabel}</span>
+                    <span>{copy.optional}</span>
+                  </label>
+                  <p className="field-hint">{copy.emailHint}</p>
+                  <input
+                    id="feedback-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    maxLength={254}
+                    placeholder={copy.emailPlaceholder}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </section>
+              </div>
+            )}
+
+            <div className="submit-area">
+              {formError && <p className="form-error" role="alert">{formError}</p>}
+              <button className="submit-button" type="submit" disabled={!selectedIssueCode || isSubmitting || isRecording}>
+                <Send size={19} aria-hidden="true" />
+                {isSubmitting ? copy.sending : copy.submit}
+              </button>
             </div>
-          )}
-
-          <div className="submit-area">
-            {formError && <p className="form-error" role="alert">{formError}</p>}
-            <button
-              className="submit-button"
-              type="submit"
-              disabled={!selectedIssue || isSubmitting || isRecording}
-            >
-              <Send size={19} aria-hidden="true" />
-              {isSubmitting ? copy.sending : copy.submit}
-            </button>
-          </div>
-        </form>
-      </section>
+          </form>
+        </section>
+        <SupportFooter lang={context.lang} />
+      </div>
     </main>
   );
 }
