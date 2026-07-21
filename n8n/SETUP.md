@@ -14,3 +14,7 @@ Workflow приймає `multipart/form-data`:
 - `audio`: необов’язковий binary-файл до 5 МБ.
 
 У Google Sheets кожне нове звернення отримує статус `NEW`. Якщо завантаження аудіо не вдалося, текстовий фідбек все одно зберігається зі статусом `audio_status=UPLOAD_FAILED`.
+
+Версія 2 додає колонки `content_type` і `video_timestamp`. Якщо workflow уже працює, додайте ці заголовки в Google Sheet, після чого оновіть ноди `Normalize & Validate` та `Append Feedback to Sheets` з файлу `Dragi_Feedback_Intake.json` і повторно опублікуйте workflow.
+
+Підтримувані `content_type`: `video`, `exercisetest`, `exercisematching`, `exerciseopen`, `general`. Підтримувані мови: `uk`, `en`, `es`, `de`.
