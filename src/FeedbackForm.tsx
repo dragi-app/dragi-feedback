@@ -1,5 +1,7 @@
 "use client";
 
+import { submissionForDraft, type PendingSubmission } from "./pendingSubmission";
+
 import {
   Check,
   FileText,
@@ -431,6 +433,7 @@ export default function FeedbackForm() {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const recordingStartedAtRef = useRef(0);
+  const pendingSubmissionRef = useRef<PendingSubmission | null>(null);
 
   useEffect(() => {
     const queryContext = readQueryContext();
@@ -519,6 +522,7 @@ export default function FeedbackForm() {
   }
 
   function resetForm() {
+    pendingSubmissionRef.current = null;
     setSelectedIssueCode(null);
     setDescription("");
     setVideoTimestamp("");
@@ -543,11 +547,8 @@ export default function FeedbackForm() {
     }
 
     setIsSubmitting(true);
-    const feedbackId = createFeedbackId();
-    const payload = {
+    const draft = {
       schema_version: 2,
-      feedback_id: feedbackId,
-      client_created_at: new Date().toISOString(),
       ui_lang: context.lang,
       content_id: context.contentId || null,
       content_type: context.contentType,
@@ -562,12 +563,14 @@ export default function FeedbackForm() {
       platform: "app_webview",
       page_context: { path: window.location.pathname, user_agent: navigator.userAgent },
     };
+    const pending = submissionForDraft(pendingSubmissionRef.current, draft, audioBlob, createFeedbackId);
+    pendingSubmissionRef.current = pending;
 
     try {
       if (WEBHOOK_URL) {
         const data = new FormData();
-        data.append("payload", JSON.stringify(payload));
-        if (audioBlob) data.append("audio", audioBlob, `${feedbackId}.audio`);
+        data.append("payload", pending.payload);
+        if (audioBlob) data.append("audio", audioBlob, `${pending.id}.audio`);
         const response = await fetch(WEBHOOK_URL, { method: "POST", body: data });
         if (!response.ok) throw new Error(`Webhook returned ${response.status}`);
         setDemoSubmission(false);
