@@ -1,5 +1,5 @@
 {
-  "name": "Dragi Feedback Intake 2.0",
+  "name": "Dragi Feedback Intake 2.1 — Immediate HTTP 200",
   "nodes": [
     {
       "parameters": {
@@ -486,14 +486,14 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { ok: true, feedback_id: $('Normalize & Validate').first().json.feedback_id } }}",
+        "responseBody": "={{ { ok: true, accepted: true, execution_id: $execution.id } }}",
         "options": {
-          "responseCode": 201,
+          "responseCode": 200,
           "responseHeaders": {
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
+                "value": "https://feedback.dragi.app"
               },
               {
                 "name": "Vary",
@@ -508,8 +508,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        650,
-        60
+        -1200,
+        120
       ]
     },
     {
@@ -577,7 +577,7 @@
       "main": [
         [
           {
-            "node": "Feedback Configuration",
+            "node": "Respond Success",
             "type": "main",
             "index": 0
           }
@@ -666,16 +666,21 @@
     },
     "Append Feedback to Sheets": {
       "main": [
-        [
-          {
-            "node": "Respond Success",
-            "type": "main",
-            "index": 0
-          }
-        ],
+        [],
         [
           {
             "node": "Respond Storage Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Success": {
+      "main": [
+        [
+          {
+            "node": "Feedback Configuration",
             "type": "main",
             "index": 0
           }
@@ -687,9 +692,10 @@
   "settings": {
     "executionOrder": "v1",
     "saveDataErrorExecution": "all",
-    "saveDataSuccessExecution": "none",
+    "saveDataSuccessExecution": "all",
     "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveExecutionProgress": true
   },
   "versionId": "c832ea50-a9aa-4e46-96c5-b6fd98590e92",
   "meta": {
