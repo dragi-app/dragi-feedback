@@ -1,13 +1,31 @@
 {
-  "name": "Dragi Feedback Intake 2.1 — Immediate HTTP 200",
+  "name": "Dragi Feedback Intake 2.2 - Native Immediate HTTP 200",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "dragi-feedback",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {
-          "allowedOrigins": "https://feedback.dragi.app"
+          "allowedOrigins": "https://feedback.dragi.app",
+          "responseCode": {
+            "values": {
+              "responseCode": 200
+            }
+          },
+          "responseData": "={{ JSON.stringify({ ok: true, accepted: true, execution_id: $execution.id }) }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://feedback.dragi.app"
+              },
+              {
+                "name": "Vary",
+                "value": "Origin"
+              }
+            ]
+          }
         }
       },
       "id": "9d64381a-bb1a-4a4f-9b50-f0e2184f6a31",
@@ -482,93 +500,6 @@
       "onError": "continueErrorOutput",
       "notesInFlow": true,
       "notes": "Виберіть Google Sheets credential. Заголовки аркуша мають точно відповідати файлу Feedback_sheet_headers.csv."
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: true, accepted: true, execution_id: $execution.id } }}",
-        "options": {
-          "responseCode": 200,
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Access-Control-Allow-Origin",
-                "value": "https://feedback.dragi.app"
-              },
-              {
-                "name": "Vary",
-                "value": "Origin"
-              }
-            ]
-          }
-        }
-      },
-      "id": "48676452-8422-4be9-ab0a-f333b9258d44",
-      "name": "Respond Success",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        -1200,
-        120
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: false, error: 'VALIDATION_ERROR', message: $json.error?.message || $json.message || 'Invalid request' } }}",
-        "options": {
-          "responseCode": 400,
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Access-Control-Allow-Origin",
-                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
-              },
-              {
-                "name": "Vary",
-                "value": "Origin"
-              }
-            ]
-          }
-        }
-      },
-      "id": "9de653ae-3373-4ef0-abdf-9ad49919bb61",
-      "name": "Respond Validation Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        -330,
-        390
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: false, error: 'STORAGE_ERROR', message: 'Feedback could not be saved' } }}",
-        "options": {
-          "responseCode": 500,
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Access-Control-Allow-Origin",
-                "value": "={{ $('Feedback Configuration').first().json.config_allowed_origin }}"
-              },
-              {
-                "name": "Vary",
-                "value": "Origin"
-              }
-            ]
-          }
-        }
-      },
-      "id": "e4361a2e-6eb9-4ffd-b26f-adbd296989b5",
-      "name": "Respond Storage Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        650,
-        220
-      ]
     }
   ],
   "pinData": {},
@@ -577,7 +508,7 @@
       "main": [
         [
           {
-            "node": "Respond Success",
+            "node": "Feedback Configuration",
             "type": "main",
             "index": 0
           }
@@ -604,13 +535,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Respond Validation Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Has Audio?": {
@@ -658,29 +583,6 @@
         [
           {
             "node": "Append Feedback to Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Append Feedback to Sheets": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Respond Storage Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Respond Success": {
-      "main": [
-        [
-          {
-            "node": "Feedback Configuration",
             "type": "main",
             "index": 0
           }
